@@ -24,7 +24,8 @@ Game :: struct {
 
 	world: EcsWorld,
 
-	render_view: ecs.View
+	render_view: ecs.View,
+	world_grid: ^World_Grid
 }
 
 Game_State :: enum {
@@ -45,40 +46,59 @@ EcsWorld :: struct {
 }
 
 
-init_game :: proc(game: ^Game, allocator := context.allocator) {
-	game.state = .Running
+init_game :: proc(game: ^Game, allocator := context.allocator) -> bool {
 
-	init_world(&game.world)
+	is_ok: bool
+
+	is_ok = init_world(&game.world)
+
+	if !is_ok {
+		report_error("Error on ecs world initialize");
+		return is_ok;
+	}
 
 	ecs.view_init(&game.render_view, &game.world.units_db, {&game.world.is_circle_sprites, &game.world.positions})
+
+	game.world_grid, is_ok = create_world_grid()
+
+	if !is_ok {
+		report_error("Grid was not properly created")
+		return is_ok
+	}
+
+	game.state = .Running
+	return is_ok
 }
 
-init_world :: proc(world: ^EcsWorld) {
+init_world :: proc(world: ^EcsWorld) -> bool {
 	world.err = ecs.init(&world.units_db, UNIT_ENTITIES_CAP)
 
 	if world.err != nil {
 		log.error("Error:", world.err)
+		return false;
 	}
 
 	if !init_table(&world.positions, &world.units_db) {
-		return;
+		return false;
 	}
 
 	if !init_table(&world.velocities, &world.units_db) {
-		return;
+		return false;
 	}
 
 	if !init_table(&world.sprites, &world.units_db) {
-		return;
+		return false;
 	}
 
 	if !init_table(&world.healths, &world.units_db) {
-		return;
+		return false;
 	}
 
 	if !init_tag_table(&world.is_circle_sprites, &world.units_db) {
-		return
+		return false;
 	}
+
+	return true;
 }
 
 init_table_or_report_error :: proc(table: ^ecs.Table, db: ^ecs.Database, err: ^ecs.Error) {
@@ -103,6 +123,8 @@ render_frame :: proc(game: ^Game) {
 	defer rl.EndDrawing()
 
 	rl.ClearBackground(rl.DARKGRAY)
+
+	render_grid(game.world_grid)
 
 	rl.DrawText(SCREEN_NAME,
 		rl.GetScreenWidth() / 2 - rl.MeasureText(SCREEN_NAME, 20) / 2,
@@ -135,9 +157,12 @@ render_frame :: proc(game: ^Game) {
 
 terminate_game :: proc(game: ^Game) {
 	if game.state == .Terminated {
+		report_error("Game data was already terminated. Aborting")
 		return
 	}
 	ecs.terminate(&game.world.units_db)
+
+	delete_world_grid(game.world_grid)
 	game.state = .Terminated
 }
 

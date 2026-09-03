@@ -23,7 +23,10 @@ main :: proc() {
 	game: Game
 	defer terminate_game(&game)
 
-	init_game(&game, context.allocator)
+	if !init_game(&game, context.allocator) {
+		report_error("Init game failure");
+		return;
+	}
 
 	for !rl.WindowShouldClose() {
 		process_frame(&game)
