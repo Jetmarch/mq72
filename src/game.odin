@@ -4,19 +4,27 @@
 
 package mq72
 
-import rl "vendor:raylib"
+import "core:fmt"
 import "core:log"
+import rl "vendor:raylib"
+import ecs "../vendor/ode_ecs/src"
+import "core:mem"
 
 CONSOLE_LOG :: #config(FILE_LOG, true)
 
-SCREEN_WIDTH :: 600
-SCREEN_HEIGHT :: 420
+SCREEN_WIDTH :: 640
+SCREEN_HEIGHT :: 480
 SCREEN_NAME :: "mq72"
+
+UNIT_ENTITIES_CAP :: 100
 
 
 Game :: struct {
 	state: Game_State,
-	logger: log.Logger
+
+	world: EcsWorld,
+
+	render_view: ecs.View
 }
 
 Game_State :: enum {
@@ -25,14 +33,69 @@ Game_State :: enum {
 	Terminated
 }
 
+EcsWorld :: struct {
+	units_db: ecs.Database,
+	err: ecs.Error,
 
-init_game :: proc(game: ^Game) {
+	positions: ecs.Table(Position),
+	velocities: ecs.Table(Velocity),
+	sprites: ecs.Table(Sprite),
+	healths: ecs.Table(Health),
+	is_circle_sprites: ecs.Tag_Table,
+}
+
+
+init_game :: proc(game: ^Game, allocator := context.allocator) {
 	game.state = .Running
-	game.logger = log.create_console_logger()
+
+	init_world(&game.world)
+
+	ecs.view_init(&game.render_view, &game.world.units_db, {&game.world.is_circle_sprites, &game.world.positions})
+}
+
+init_world :: proc(world: ^EcsWorld) {
+	world.err = ecs.init(&world.units_db, UNIT_ENTITIES_CAP)
+
+	if world.err != nil {
+		log.error("Error:", world.err)
+	}
+
+	if !init_table(&world.positions, &world.units_db) {
+		return;
+	}
+
+	if !init_table(&world.velocities, &world.units_db) {
+		return;
+	}
+
+	if !init_table(&world.sprites, &world.units_db) {
+		return;
+	}
+
+	if !init_table(&world.healths, &world.units_db) {
+		return;
+	}
+
+	if !init_tag_table(&world.is_circle_sprites, &world.units_db) {
+		return
+	}
+}
+
+init_table_or_report_error :: proc(table: ^ecs.Table, db: ^ecs.Database, err: ^ecs.Error) {
+	err = ecs.table_init(table, db, COMPONENTS_CAP)
+	if err != nil {
+		report_error(err);
+	}
 }
 
 process_frame :: proc(game: ^Game) {
-
+	if rl.IsMouseButtonPressed(.LEFT) {
+		fmt.println("Start unit creation")
+		x := rl.GetMouseX();
+		y := rl.GetMouseY();
+		eid := create_base_unit_entity(x, y, &game.world)
+		fmt.println("End unit creation")
+	}
 }
 
 render_frame :: proc(game: ^Game) {
@@ -46,9 +109,28 @@ render_frame :: proc(game: ^Game) {
 		rl.GetScreenHeight() / 2 - 50, 20, rl.GRAY
 	)
 
-	// Draw enviroment
-	// Draw entities
-	// Draw UI
+	renderable_eid := ecs.entities_slice(&game.render_view)
+	pos_slice := ecs.slice(&game.render_view, Position)
+
+
+	str := fmt.ctprint("renderable eid:", len(renderable_eid))
+	rl.DrawText(str,
+		rl.GetScreenWidth() / 2 - rl.MeasureText(str, 20) / 2,
+		50, 20, rl.GRAY
+	)
+
+	str = fmt.ctprint("fps:",rl.GetFPS())
+
+	rl.DrawText(str,
+		rl.GetScreenWidth() / 2 - rl.MeasureText(str, 20) / 2,
+		70, 20, rl.GRAY
+	)
+
+	for i in 0..<len(renderable_eid) {
+		pos := pos_slice[i]
+
+		rl.DrawCircle(i32(pos.x), i32(pos.y), 4.0, rl.BLUE)
+	}
 }
 
 terminate_game :: proc(game: ^Game) {
@@ -57,4 +139,28 @@ terminate_game :: proc(game: ^Game) {
 	}
 
 	game.state = .Terminated
+}
+
+init_table :: proc(table: ^ecs.Table($T), db: ^ecs.Database) -> bool {
+	err := ecs.table_init(table, db, UNIT_ENTITIES_CAP)
+	if err != nil {
+		report_error(err);
+		return false;
+	}
+
+	return true;
+}
+
+init_tag_table :: proc(tag_table: ^ecs.Tag_Table, db: ^ecs.Database) -> bool{
+	err := ecs.tag_table_init(tag_table, db, UNIT_ENTITIES_CAP)
+	if err != nil {
+		report_error(err);
+		return false;
+	}
+
+	return true;
+}
+
+report_error :: proc(arg: $T) {
+	fmt.println(arg)
 }
