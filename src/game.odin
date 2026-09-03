@@ -137,7 +137,7 @@ terminate_game :: proc(game: ^Game) {
 	if game.state == .Terminated {
 		return
 	}
-
+	ecs.terminate(&game.world.units_db)
 	game.state = .Terminated
 }
 
