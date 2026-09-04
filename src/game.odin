@@ -25,7 +25,9 @@ Game :: struct {
 	world: EcsWorld,
 
 	render_view: ecs.View,
-	world_grid: ^World_Grid
+	world_grid: ^World_Grid,
+
+	unit_selection: Unit_Selection,
 }
 
 Game_State :: enum {
@@ -65,6 +67,8 @@ init_game :: proc(game: ^Game, allocator := context.allocator) -> bool {
 		report_error("Grid was not properly created")
 		return is_ok
 	}
+
+	game.unit_selection.is_active = false
 
 	game.state = .Running
 	return is_ok
@@ -109,12 +113,22 @@ init_table_or_report_error :: proc(table: ^ecs.Table, db: ^ecs.Database, err: ^e
 }
 
 process_frame :: proc(game: ^Game) {
-	if rl.IsMouseButtonPressed(.LEFT) {
-		fmt.println("Start unit creation")
+	if rl.IsKeyPressed(.SPACE) {
 		x := rl.GetMouseX();
 		y := rl.GetMouseY();
 		eid := create_base_unit_entity(x, y, &game.world)
-		fmt.println("End unit creation")
+	}
+
+	if rl.IsMouseButtonPressed(.LEFT) {
+		unit_select_start(&game.unit_selection)
+	}
+
+	if rl.IsMouseButtonDown(.LEFT) {
+		unit_select_update(&game.unit_selection)
+	}
+
+	if rl.IsMouseButtonReleased(.LEFT) {
+		unit_select_end(&game.unit_selection)
 	}
 }
 
@@ -123,6 +137,8 @@ render_frame :: proc(game: ^Game) {
 	defer rl.EndDrawing()
 
 	rl.ClearBackground(rl.DARKGRAY)
+
+	unit_select_render(&game.unit_selection)
 
 	render_grid(game.world_grid)
 
