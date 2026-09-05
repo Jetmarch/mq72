@@ -23,9 +23,9 @@ Game :: struct {
 
 	ecs_world: Ecs_World,
 
-	render_view: ecs.View,
 
 	//TODO: Move views to EcsWorld
+	render_view: ecs.View,
 	grid_position_view: ecs.View,
 	world_grid: ^World_Grid,
 

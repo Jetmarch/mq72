@@ -68,6 +68,7 @@ unit_select_handle_input :: proc(selection: ^Unit_Selection) {
 	}
 }
 
-unit_select_mark_selected_units :: proc(selection: ^Unit_Selection) {
+unit_select_mark_selected_units :: proc(selection: ^Unit_Selection, ecs_world: ^Ecs_World) {
+	if !selection.is_active { return }
 
 }
