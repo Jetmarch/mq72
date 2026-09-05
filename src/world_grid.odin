@@ -1,11 +1,15 @@
 package mq72
 
+import "core:fmt"
 import rl "vendor:raylib"
 import "core:testing"
+import ecs "../vendor/ode_ecs/src"
 
+MAX_ENTITIES_IN_CELL :: 4
 MAX_MAP_WIDTH :: 256
 MAX_MAP_HEIGHT :: 256
 WORLD_CELL_SIZE :: 16
+
 
 GRID_COLOR :: rl.Color{ 76, 63, 47, 125 }
 
@@ -18,7 +22,8 @@ World_Grid :: struct {
 }
 
 World_Cell :: struct {
-	type: Grid_Cell_Type
+	type: Grid_Cell_Type,
+	entities: [MAX_ENTITIES_IN_CELL]ecs.entity_id,
 }
 
 Grid_Cell_Type :: enum {
@@ -33,7 +38,7 @@ Grid_Error :: enum {
 }
 
 
-create_world_grid :: proc(width: i32 = MAX_MAP_WIDTH,
+world_grid_create :: proc(width: i32 = MAX_MAP_WIDTH,
 	height: i32 = MAX_MAP_HEIGHT,
 	cell_size: i32 = WORLD_CELL_SIZE,
 	allocator := context.allocator) -> (^World_Grid, bool) {
@@ -51,7 +56,7 @@ create_world_grid :: proc(width: i32 = MAX_MAP_WIDTH,
 		return grid, true
 }
 
-grid_get_cell :: proc(grid: ^World_Grid, x: i32, y: i32) -> (^World_Cell, Grid_Error) {
+world_grid_get_cell :: proc(grid: ^World_Grid, x: i32, y: i32) -> (^World_Cell, Grid_Error) {
 	if grid == nil {
 		return nil, .Grid_Not_Initialized
 	}
@@ -63,11 +68,11 @@ grid_get_cell :: proc(grid: ^World_Grid, x: i32, y: i32) -> (^World_Cell, Grid_E
 	return nil, .Out_Of_Range
 }
 
-delete_world_grid :: proc(grid: ^World_Grid) {
+world_grid_delete :: proc(grid: ^World_Grid) {
 	free(grid)
 }
 
-render_grid :: proc(grid: ^World_Grid) {
+world_grid_render_grid :: proc(grid: ^World_Grid) {
 	// Render grid
 	cell_size := grid.cell_size
 	grid_origin := grid.origin
@@ -88,10 +93,26 @@ render_grid :: proc(grid: ^World_Grid) {
 	}
 }
 
+world_grid_update_entities_position :: proc(grid: ^World_Grid, positions: ^ecs.Table(Position)) {
+	pos_slice := ecs.slice(positions)
+
+	pos: Position
+	cell: ^World_Cell
+	error: Grid_Error
+	for i in 0..<len(pos_slice) {
+		pos = pos_slice[i]
+		cell, error = world_grid_get_cell(grid, pos.x, pos.y)
+		if error != .None {
+			report_error(fmt.aprintf("Position % is outside of thw world grid", pos))
+			continue
+		}
+	}
+}
+
 @(test)
 create_empty_grid_test :: proc(t: ^testing.T) {
-    grid, err := create_world_grid()
-    defer delete_world_grid(grid)
+    grid, err := world_grid_create()
+    defer world_grid_delete(grid)
 
     testing.expect(t, grid != nil, "Something went wrong on grid memory allocation")
 }

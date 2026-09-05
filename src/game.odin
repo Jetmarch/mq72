@@ -25,6 +25,8 @@ Game :: struct {
 	world: EcsWorld,
 
 	render_view: ecs.View,
+
+	position_view: ecs.View,
 	world_grid: ^World_Grid,
 
 	unit_selection: Unit_Selection,
@@ -61,7 +63,7 @@ init_game :: proc(game: ^Game, allocator := context.allocator) -> bool {
 
 	ecs.view_init(&game.render_view, &game.world.units_db, {&game.world.is_circle_sprites, &game.world.positions})
 
-	game.world_grid, is_ok = create_world_grid()
+	game.world_grid, is_ok = world_grid_create()
 
 	if !is_ok {
 		report_error("Grid was not properly created")
@@ -112,17 +114,9 @@ process_frame :: proc(game: ^Game) {
 		eid := create_base_unit_entity(x, y, &game.world)
 	}
 
-	if rl.IsMouseButtonPressed(.LEFT) {
-		unit_select_start(&game.unit_selection)
-	}
+	unit_select_handle_input(&game.unit_selection)
+	unit_select_mark_selected_units(&game.unit_selection)
 
-	if rl.IsMouseButtonDown(.LEFT) {
-		unit_select_update(&game.unit_selection)
-	}
-
-	if rl.IsMouseButtonReleased(.LEFT) {
-		unit_select_end(&game.unit_selection)
-	}
 }
 
 render_frame :: proc(game: ^Game) {
@@ -133,7 +127,7 @@ render_frame :: proc(game: ^Game) {
 
 	unit_select_render(&game.unit_selection)
 
-	render_grid(game.world_grid)
+	world_grid_render_grid(game.world_grid)
 
 	rl.DrawText(SCREEN_NAME,
 		rl.GetScreenWidth() / 2 - rl.MeasureText(SCREEN_NAME, 20) / 2,
@@ -171,7 +165,7 @@ terminate_game :: proc(game: ^Game) {
 	}
 	ecs.terminate(&game.world.units_db)
 
-	delete_world_grid(game.world_grid)
+	world_grid_delete(game.world_grid)
 	game.state = .Terminated
 }
 

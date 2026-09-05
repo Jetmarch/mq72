@@ -53,3 +53,21 @@ unit_select_render :: proc(selection: ^Unit_Selection) {
 	x, y, width, height := get_abs_rect_size(&selection.rect)
 	raylib.DrawRectangle(x, y, width, height, UNIT_SELECTION_COLOR)
 }
+
+unit_select_handle_input :: proc(selection: ^Unit_Selection) {
+	if raylib.IsMouseButtonPressed(.LEFT) {
+		unit_select_start(selection)
+	}
+
+	if raylib.IsMouseButtonDown(.LEFT) {
+		unit_select_update(selection)
+	}
+
+	if raylib.IsMouseButtonReleased(.LEFT) {
+		unit_select_end(selection)
+	}
+}
+
+unit_select_mark_selected_units :: proc(selection: ^Unit_Selection) {
+
+}
