@@ -105,13 +105,6 @@ init_world :: proc(world: ^EcsWorld) -> bool {
 	return true;
 }
 
-init_table_or_report_error :: proc(table: ^ecs.Table, db: ^ecs.Database, err: ^ecs.Error) {
-	err = ecs.table_init(table, db, COMPONENTS_CAP)
-	if err != nil {
-		report_error(err);
-	}
-}
-
 process_frame :: proc(game: ^Game) {
 	if rl.IsKeyPressed(.SPACE) {
 		x := rl.GetMouseX();
