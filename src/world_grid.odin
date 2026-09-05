@@ -68,6 +68,10 @@ world_grid_get_cell :: proc(grid: ^World_Grid, x: i32, y: i32) -> (^World_Cell, 
 	return nil, .Out_Of_Range
 }
 
+world_grid_get_cell_by_world_pos :: proc(grid: ^World_Grid, x: i32, y: i32) -> (^World_Cell, Grid_Error) {
+	return world_grid_get_cell(grid, x / grid.cell_size, y / grid.cell_size)
+}
+
 world_grid_delete :: proc(grid: ^World_Grid) {
 	free(grid)
 }
@@ -93,19 +97,28 @@ world_grid_render_grid :: proc(grid: ^World_Grid) {
 	}
 }
 
-world_grid_update_entities_position :: proc(grid: ^World_Grid, positions: ^ecs.Table(Position)) {
-	pos_slice := ecs.slice(positions)
+world_grid_update_entities_position :: proc(grid: ^World_Grid,
+	positions_table: ^ecs.Table(Position),
+	grid_positions_table: ^ecs.Table(Grid_Position),
+	view: ^ecs.View) {
+
+	eids := ecs.entities_slice(view)
+	positions := ecs.slice(positions_table)
+	grid_positions := ecs.slice(grid_positions_table)
 
 	pos: Position
 	cell: ^World_Cell
 	error: Grid_Error
-	for i in 0..<len(pos_slice) {
-		pos = pos_slice[i]
-		cell, error = world_grid_get_cell(grid, pos.x, pos.y)
+	for i in 0..<len(eids) {
+		pos = positions[i]
+		cell, error = world_grid_get_cell_by_world_pos(grid, pos.x, pos.y)
 		if error != .None {
 			report_error(fmt.aprintf("Position % is outside of thw world grid", pos))
 			continue
 		}
+
+		grid_positions[i].x = i32(pos.x / grid.cell_size)
+		grid_positions[i].y = i32(pos.y / grid.cell_size)
 	}
 }
 

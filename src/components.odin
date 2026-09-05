@@ -24,3 +24,7 @@ Health :: struct {
 }
 
 CircleSprite :: struct {}
+
+Grid_Position :: struct {
+	x, y: i32
+}

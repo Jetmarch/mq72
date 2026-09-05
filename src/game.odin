@@ -8,7 +8,6 @@ import "core:fmt"
 import "core:log"
 import rl "vendor:raylib"
 import ecs "../vendor/ode_ecs/src"
-import "core:mem"
 
 CONSOLE_LOG :: #config(FILE_LOG, true)
 
@@ -22,11 +21,12 @@ UNIT_ENTITIES_CAP :: 100
 Game :: struct {
 	state: Game_State,
 
-	world: EcsWorld,
+	ecs_world: Ecs_World,
 
 	render_view: ecs.View,
 
-	position_view: ecs.View,
+	//TODO: Move views to EcsWorld
+	grid_position_view: ecs.View,
 	world_grid: ^World_Grid,
 
 	unit_selection: Unit_Selection,
@@ -38,7 +38,7 @@ Game_State :: enum {
 	Terminated
 }
 
-EcsWorld :: struct {
+Ecs_World :: struct {
 	units_db: ecs.Database,
 	err: ecs.Error,
 
@@ -47,6 +47,7 @@ EcsWorld :: struct {
 	sprites: ecs.Table(Sprite),
 	healths: ecs.Table(Health),
 	is_circle_sprites: ecs.Tag_Table,
+	grid_positions: ecs.Table(Grid_Position),
 }
 
 
@@ -54,14 +55,16 @@ init_game :: proc(game: ^Game, allocator := context.allocator) -> bool {
 
 	is_ok: bool
 
-	is_ok = init_world(&game.world)
+	is_ok = init_world(&game.ecs_world)
 
 	if !is_ok {
 		report_error("Error on ecs world initialize");
 		return is_ok;
 	}
 
-	ecs.view_init(&game.render_view, &game.world.units_db, {&game.world.is_circle_sprites, &game.world.positions})
+	ecs.view_init(&game.render_view, &game.ecs_world.units_db, {&game.ecs_world.is_circle_sprites, &game.ecs_world.positions})
+
+	ecs.view_init(&game.grid_position_view, &game.ecs_world.units_db, {&game.ecs_world.positions, &game.ecs_world.grid_positions})
 
 	game.world_grid, is_ok = world_grid_create()
 
@@ -76,31 +79,35 @@ init_game :: proc(game: ^Game, allocator := context.allocator) -> bool {
 	return is_ok
 }
 
-init_world :: proc(world: ^EcsWorld) -> bool {
-	world.err = ecs.init(&world.units_db, UNIT_ENTITIES_CAP)
+init_world :: proc(ecs_world: ^Ecs_World) -> bool {
+	ecs_world.err = ecs.init(&ecs_world.units_db, UNIT_ENTITIES_CAP)
 
-	if world.err != nil {
-		log.error("Error:", world.err)
+	if ecs_world.err != nil {
+		log.error("Error:", ecs_world.err)
 		return false;
 	}
 
-	if !init_table(&world.positions, &world.units_db) {
+	if !init_table(&ecs_world.positions, &ecs_world.units_db) {
 		return false;
 	}
 
-	if !init_table(&world.velocities, &world.units_db) {
+	if !init_table(&ecs_world.velocities, &ecs_world.units_db) {
 		return false;
 	}
 
-	if !init_table(&world.sprites, &world.units_db) {
+	if !init_table(&ecs_world.sprites, &ecs_world.units_db) {
 		return false;
 	}
 
-	if !init_table(&world.healths, &world.units_db) {
+	if !init_table(&ecs_world.healths, &ecs_world.units_db) {
 		return false;
 	}
 
-	if !init_tag_table(&world.is_circle_sprites, &world.units_db) {
+	if !init_tag_table(&ecs_world.is_circle_sprites, &ecs_world.units_db) {
+		return false;
+	}
+
+	if !init_table(&ecs_world.grid_positions, &ecs_world.units_db) {
 		return false;
 	}
 
@@ -111,12 +118,14 @@ process_frame :: proc(game: ^Game) {
 	if rl.IsKeyPressed(.SPACE) {
 		x := rl.GetMouseX();
 		y := rl.GetMouseY();
-		eid := create_base_unit_entity(x, y, &game.world)
+		eid := create_base_unit_entity(x, y, &game.ecs_world)
 	}
 
 	unit_select_handle_input(&game.unit_selection)
 	unit_select_mark_selected_units(&game.unit_selection)
 
+	world_grid_update_entities_position(game.world_grid,
+	 &game.ecs_world.positions, &game.ecs_world.grid_positions, &game.grid_position_view)
 }
 
 render_frame :: proc(game: ^Game) {
@@ -129,11 +138,9 @@ render_frame :: proc(game: ^Game) {
 
 	world_grid_render_grid(game.world_grid)
 
-	rl.DrawText(SCREEN_NAME,
-		rl.GetScreenWidth() / 2 - rl.MeasureText(SCREEN_NAME, 20) / 2,
-		rl.GetScreenHeight() / 2 - 50, 20, rl.GRAY
-	)
+	rl.DrawFPS(20, 20)
 
+	// Unit render system
 	renderable_eid := ecs.entities_slice(&game.render_view)
 	pos_slice := ecs.slice(&game.render_view, Position)
 
@@ -144,18 +151,15 @@ render_frame :: proc(game: ^Game) {
 		50, 20, rl.GRAY
 	)
 
-	str = fmt.ctprint("fps:",rl.GetFPS())
-
-	rl.DrawText(str,
-		rl.GetScreenWidth() / 2 - rl.MeasureText(str, 20) / 2,
-		70, 20, rl.GRAY
-	)
-
+	pos: ^Position
+	grid_pos: ^Grid_Position
 	for i in 0..<len(renderable_eid) {
-		pos := pos_slice[i]
+		pos = pos_slice[i]
 
 		rl.DrawCircle(i32(pos.x), i32(pos.y), 4.0, rl.BLUE)
 	}
+
+	// Additional info
 }
 
 terminate_game :: proc(game: ^Game) {
@@ -163,7 +167,7 @@ terminate_game :: proc(game: ^Game) {
 		report_error("Game data was already terminated. Aborting")
 		return
 	}
-	ecs.terminate(&game.world.units_db)
+	ecs.terminate(&game.ecs_world.units_db)
 
 	world_grid_delete(game.world_grid)
 	game.state = .Terminated
