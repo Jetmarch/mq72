@@ -11,23 +11,14 @@ Rect :: struct {
 }
 
 get_abs_rect_size :: proc(rect: ^Rect) -> (x, y, width, height: i32) {
-	if rect.max_x < rect.min_x {
-		x = rect.max_x
-		width = rect.min_x - rect.max_x
-	} else {
-		x = rect.min_x
-		width = rect.max_x - rect.min_x
-	}
 
-	if rect.max_y < rect.max_y {
-		y = rect.max_y
-		height = rect.min_y - rect.min_y
-	} else {
-		y = rect.min_y
-		height = rect.max_y - rect.min_y
-	}
+	max_x := max(rect.max_x, rect.min_x)
+	min_x := min(rect.max_x, rect.min_x)
 
-	return x, y, width, height
+	max_y := max(rect.max_y, rect.min_y)
+	min_y := min(rect.max_y, rect.min_y)
+
+	return min_x, min_y, max_x - min_x, max_y - min_y
 }
 
 //A selection rectangle
