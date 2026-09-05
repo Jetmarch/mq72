@@ -74,7 +74,26 @@ world_grid_get_cell :: proc(grid: ^World_Grid, x: i32, y: i32) -> (^World_Cell, 
 	return nil, .Out_Of_Range
 }
 
-world_grid_get_cells_in_rect :: proc(grid: ^World_Grid, rect: Rect) -> (rect_selection: [dynamic]World_Cell) {
+///
+// TODO: Debug and fix incorrect cells selection
+world_grid_get_cells_in_rect :: proc(grid: ^World_Grid, rect: ^Rect) -> ([dynamic]World_Cell) {
+	x, y, width, height := get_abs_rect_size(rect)
+	rect_selection := make([dynamic]World_Cell)
+
+
+	selected_cell: ^World_Cell
+	err: Grid_Error
+	for i := x; i < width; i += grid.cell_size {
+		for j := y; j < height; j += grid.cell_size {
+			selected_cell, err = world_grid_get_cell_by_world_pos(grid, x, y)
+			if err != .None {
+				continue
+			}
+
+			append(&rect_selection, selected_cell^)
+		}
+	}
+
 	return rect_selection
 }
 

@@ -47,6 +47,7 @@ Ecs_World :: struct {
 	sprites: ecs.Table(Sprite),
 	healths: ecs.Table(Health),
 	is_circle_sprites: ecs.Tag_Table,
+	is_unit_selected: ecs.Tag_Table,
 	grid_positions: ecs.Table(Grid_Position),
 }
 
@@ -107,6 +108,10 @@ init_world :: proc(ecs_world: ^Ecs_World) -> bool {
 		return false;
 	}
 
+	if !init_tag_table(&ecs_world.is_unit_selected, &ecs_world.units_db) {
+		return false
+	}
+
 	if !init_table(&ecs_world.grid_positions, &ecs_world.units_db) {
 		return false;
 	}
@@ -157,6 +162,10 @@ render_frame :: proc(game: ^Game) {
 		pos = pos_slice[i]
 
 		rl.DrawCircle(i32(pos.x), i32(pos.y), 4.0, rl.BLUE)
+
+		if ecs.has_tag(&game.ecs_world.is_unit_selected, renderable_eid[i]) {
+			rl.DrawCircle(i32(pos.x), i32(pos.y), 5.0, rl.Color {125, 0, 0, 125})
+		}
 	}
 
 	// Additional info

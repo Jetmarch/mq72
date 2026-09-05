@@ -28,3 +28,5 @@ CircleSprite :: struct {}
 Grid_Position :: struct {
 	x, y: i32
 }
+
+Selected :: struct {}
