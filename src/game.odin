@@ -122,7 +122,7 @@ process_frame :: proc(game: ^Game) {
 	}
 
 	unit_select_handle_input(&game.unit_selection)
-	unit_select_mark_selected_units(&game.unit_selection)
+	unit_select_mark_selected_units(&game.unit_selection, &game.ecs_world, game.world_grid)
 
 	world_grid_update_entities_position(game.world_grid,
 	 &game.ecs_world.positions, &game.ecs_world.grid_positions, &game.grid_position_view)

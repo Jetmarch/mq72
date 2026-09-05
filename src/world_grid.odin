@@ -14,16 +14,17 @@ WORLD_CELL_SIZE :: 16
 GRID_COLOR :: rl.Color{ 76, 63, 47, 125 }
 
 World_Grid :: struct {
-	cells: [MAX_MAP_WIDTH][MAX_MAP_HEIGHT]World_Cell,
+	cells: [MAX_MAP_WIDTH * MAX_MAP_HEIGHT]World_Cell,
 	cell_size: i32,
 	width: i32,
 	height: i32,
-	origin: Position
+	origin: Position,
 }
 
 World_Cell :: struct {
 	type: Grid_Cell_Type,
 	entities: [MAX_ENTITIES_IN_CELL]ecs.entity_id,
+	entities_count: u8,
 }
 
 Grid_Cell_Type :: enum {
@@ -56,16 +57,25 @@ world_grid_create :: proc(width: i32 = MAX_MAP_WIDTH,
 		return grid, true
 }
 
+world_grid_cell_coord_to_index :: proc(x: i32, y:i32, width: i32) -> (index: i32) {
+	return y * width + x
+}
+
 world_grid_get_cell :: proc(grid: ^World_Grid, x: i32, y: i32) -> (^World_Cell, Grid_Error) {
 	if grid == nil {
 		return nil, .Grid_Not_Initialized
 	}
 
 	if x < MAX_MAP_WIDTH && x > 0 && y < MAX_MAP_HEIGHT && y > 0 {
-		return &grid.cells[x][y], .None
+		index := world_grid_cell_coord_to_index(x, y, grid.width)
+		return &grid.cells[index], .None
 	}
 
 	return nil, .Out_Of_Range
+}
+
+world_grid_get_cells_in_rect :: proc(grid: ^World_Grid, rect: Rect) -> (rect_selection: [dynamic]World_Cell) {
+	return rect_selection
 }
 
 world_grid_get_cell_by_world_pos :: proc(grid: ^World_Grid, x: i32, y: i32) -> (^World_Cell, Grid_Error) {
