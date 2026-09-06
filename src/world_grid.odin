@@ -6,9 +6,12 @@ import "core:testing"
 import ecs "../vendor/ode_ecs/src"
 
 MAX_ENTITIES_IN_CELL :: 4
-MAX_MAP_WIDTH :: 256
-MAX_MAP_HEIGHT :: 256
-WORLD_CELL_SIZE :: 16
+MAX_MAP_WIDTH :: 16
+MAX_MAP_HEIGHT :: 16
+// At this point we don't care about memory usage
+// TODO: Calculate amount of cells that can fits in viewport
+MAX_CELL_IN_SELECTION_RECT :: MAX_MAP_WIDTH * MAX_MAP_HEIGHT
+WORLD_CELL_SIZE :: 32
 
 
 GRID_COLOR :: rl.Color{ 76, 63, 47, 125 }
@@ -22,13 +25,15 @@ World_Grid :: struct {
 }
 
 World_Cell :: struct {
+	x, y: i32,
 	type: Grid_Cell_Type,
 	entities: [MAX_ENTITIES_IN_CELL]ecs.entity_id,
 	entities_count: u8,
 }
 
 Grid_Cell_Type :: enum {
-	Empty = 0,
+	None = 0,
+	Empty,
 	Building,
 }
 
@@ -54,6 +59,18 @@ world_grid_create :: proc(width: i32 = MAX_MAP_WIDTH,
 		grid.height = height
 		grid.origin = Position { 0, 0, 0 }
 
+		index: i32
+		for x: i32 = 0; x < width; x+=1 {
+			for y: i32 = 0; y < height; y+=1 {
+				index = world_grid_cell_coord_to_index(x, y, width)
+				grid.cells[index].x = x
+				grid.cells[index].y = y
+				grid.cells[index].type = .Empty
+
+			}
+			fmt.println()
+		}
+
 		return grid, true
 }
 
@@ -76,21 +93,21 @@ world_grid_get_cell :: proc(grid: ^World_Grid, x: i32, y: i32) -> (^World_Cell, 
 
 ///
 // TODO: Debug and fix incorrect cells selection
-world_grid_get_cells_in_rect :: proc(grid: ^World_Grid, rect: ^Rect) -> ([dynamic]World_Cell) {
+world_grid_get_cells_in_rect :: proc(grid: ^World_Grid, rect: ^Rect) -> (rect_selection: [MAX_CELL_IN_SELECTION_RECT]World_Cell) {
 	x, y, width, height := get_abs_rect_size(rect)
-	rect_selection := make([dynamic]World_Cell)
-
 
 	selected_cell: ^World_Cell
 	err: Grid_Error
-	for i := x; i < width; i += grid.cell_size {
-		for j := y; j < height; j += grid.cell_size {
-			selected_cell, err = world_grid_get_cell_by_world_pos(grid, x, y)
+	next_cell_index: i32 = 0
+	for i := x; i < x + width; i += grid.cell_size {
+		for j := y; j < y + height; j += grid.cell_size {
+			selected_cell, err = world_grid_get_cell_by_world_pos(grid, i, j)
 			if err != .None {
 				continue
 			}
 
-			append(&rect_selection, selected_cell^)
+			rect_selection[next_cell_index] = selected_cell^
+			next_cell_index += 1
 		}
 	}
 
@@ -124,6 +141,17 @@ world_grid_render_grid :: proc(grid: ^World_Grid) {
 		rl.DrawLine(i * cell_size, 0,
 			i * cell_size, line_height, GRID_COLOR)
 	}
+
+	// index: i32
+	// cell: ^World_Cell
+	// for x: i32 = 0; x < grid.width; x+=1 {
+	// 	for y: i32 = 0; y < grid.height; y+=1 {
+	// 		index = world_grid_cell_coord_to_index(x, y, grid.width)
+
+	// 		cell = &grid.cells[index]
+	// 		rl.DrawText(fmt.ctprint(x, y), cell.x + grid.cell_size * grid.width, cell.y + grid.cell_size * grid.height, 14, rl.Color {0, 255, 255, 100})
+	// 	}
+	// }
 }
 
 world_grid_update_entities_position :: proc(grid: ^World_Grid,

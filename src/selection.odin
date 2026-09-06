@@ -85,7 +85,6 @@ unit_select_mark_selected_units :: proc(selection: ^Unit_Selection, ecs_world: ^
 
 	//Get all collided with selection rect world cells
 	selected_world_cells := world_grid_get_cells_in_rect(grid, &selection.rect)
-	defer delete(selected_world_cells)
 
 	cell: ^World_Cell
 	eid: ecs.entity_id
@@ -93,8 +92,9 @@ unit_select_mark_selected_units :: proc(selection: ^Unit_Selection, ecs_world: ^
 	for i in 0..<len(selected_world_cells) {
 		cell = &selected_world_cells[i]
 
-		for j in 0..=cell.entities_count {
+		for j in 0..<MAX_ENTITIES_IN_CELL {
 			eid = cell.entities[j]
+
 
 			if ecs.is_entity_expired(&ecs_world.units_db, eid) { continue }
 
@@ -103,5 +103,19 @@ unit_select_mark_selected_units :: proc(selection: ^Unit_Selection, ecs_world: ^
 				report_error(fmt.aprint("Error while add 'Selected' tag to unit %", eid))
 			}
 		}
+	}
+}
+
+unit_select_debug_render_selected_grid :: proc(grid: ^World_Grid, selection: ^Unit_Selection) {
+	if !selection.is_active { return }
+
+	selected_world_cells := world_grid_get_cells_in_rect(grid, &selection.rect)
+	cell: ^World_Cell
+	for i in 0..<len(selected_world_cells) {
+		cell = &selected_world_cells[i]
+
+		if cell.type == .None { continue }
+
+		raylib.DrawRectangle(cell.x * grid.cell_size, cell.y * grid.cell_size, grid.cell_size, grid.cell_size, raylib.Color {250, 0, 0, 100})
 	}
 }

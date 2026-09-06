@@ -141,6 +141,8 @@ render_frame :: proc(game: ^Game) {
 
 	unit_select_render(&game.unit_selection)
 
+	unit_select_debug_render_selected_grid(game.world_grid, &game.unit_selection)
+
 	world_grid_render_grid(game.world_grid)
 
 	rl.DrawFPS(20, 20)
@@ -148,13 +150,6 @@ render_frame :: proc(game: ^Game) {
 	// Unit render system
 	renderable_eid := ecs.entities_slice(&game.render_view)
 	pos_slice := ecs.slice(&game.render_view, Position)
-
-
-	str := fmt.ctprint("renderable eid:", len(renderable_eid))
-	rl.DrawText(str,
-		rl.GetScreenWidth() / 2 - rl.MeasureText(str, 20) / 2,
-		50, 20, rl.GRAY
-	)
 
 	pos: ^Position
 	grid_pos: ^Grid_Position
