@@ -1,9 +1,10 @@
 package mq72
 
-import "core:fmt"
-import rl "vendor:raylib"
-import "core:testing"
 import ecs "../vendor/ode_ecs/src"
+import "core:fmt"
+import "core:testing"
+import "utils"
+import rl "vendor:raylib"
 
 MAX_ENTITIES_IN_CELL :: 4
 MAX_MAP_WIDTH :: 16
@@ -14,20 +15,18 @@ MAX_CELL_IN_SELECTION_RECT :: MAX_MAP_WIDTH * MAX_MAP_HEIGHT
 WORLD_CELL_SIZE :: 32
 
 
-GRID_COLOR :: rl.Color{ 76, 63, 47, 125 }
+GRID_COLOR :: rl.Color{76, 63, 47, 125}
 
 World_Grid :: struct {
-	cells: [MAX_MAP_WIDTH * MAX_MAP_HEIGHT]World_Cell,
+	grid:      utils.Grid,
 	cell_size: i32,
-	width: i32,
-	height: i32,
-	origin: Position,
+	origin:    Position,
 }
 
 World_Cell :: struct {
-	x, y: i32,
-	type: Grid_Cell_Type,
-	entities: [MAX_ENTITIES_IN_CELL]ecs.entity_id,
+	x, y:           i32,
+	type:           Grid_Cell_Type,
+	entities:       [MAX_ENTITIES_IN_CELL]ecs.entity_id,
 	entities_count: u8,
 }
 
@@ -37,63 +36,40 @@ Grid_Cell_Type :: enum {
 	Building,
 }
 
-Grid_Error :: enum {
-	None,
-	Out_Of_Range,
-	Grid_Not_Initialized
-}
-
-
-world_grid_create :: proc(width: i32 = MAX_MAP_WIDTH,
+world_grid_create :: proc(
+	width: i32 = MAX_MAP_WIDTH,
 	height: i32 = MAX_MAP_HEIGHT,
 	cell_size: i32 = WORLD_CELL_SIZE,
-	allocator := context.allocator) -> (^World_Grid, bool) {
+	allocator := context.allocator,
+) -> World_Grid {
 
-		grid, err := new(World_Grid, allocator)
-		if err != nil {
-			return nil, false
-		}
-
-		grid.cell_size = cell_size
-		grid.width = width
-		grid.height = height
-		grid.origin = Position { 0, 0, 0 }
-
-		index: i32
-		for x: i32 = 0; x < width; x+=1 {
-			for y: i32 = 0; y < height; y+=1 {
-				index = world_grid_cell_coord_to_index(x, y, width)
-				grid.cells[index].x = x
-				grid.cells[index].y = y
-				grid.cells[index].type = .Empty
-
-			}
-			fmt.println()
-		}
-
-		return grid, true
-}
-
-world_grid_cell_coord_to_index :: proc(x: i32, y:i32, width: i32) -> (index: i32) {
-	return y * width + x
-}
-
-world_grid_get_cell :: proc(grid: ^World_Grid, x: i32, y: i32) -> (^World_Cell, Grid_Error) {
-	if grid == nil {
-		return nil, .Grid_Not_Initialized
+	world_grid := World_Grid {
+		cell_size = cell_size,
+		grid      = utils.grid_init(width, height),
+		origin    = Position{0, 0, 0},
 	}
 
-	if x < MAX_MAP_WIDTH && x > 0 && y < MAX_MAP_HEIGHT && y > 0 {
-		index := world_grid_cell_coord_to_index(x, y, grid.width)
-		return &grid.cells[index], .None
+	index: i32
+	for x: i32 = 0; x < width; x += 1 {
+		for y: i32 = 0; y < height; y += 1 {
+			index = utils.grid_cell_coord_to_index(x, y, width)
+			world_grid.grid.cells[index].x = x
+			world_grid.grid.cells[index].y = y
+			// world_grid.grid.cells[index].type = .Empty
+
+		}
 	}
 
-	return nil, .Out_Of_Range
+	return grid
 }
 
 ///
-// TODO: Debug and fix incorrect cells selection
-world_grid_get_cells_in_rect :: proc(grid: ^World_Grid, rect: ^Rect) -> (rect_selection: [MAX_CELL_IN_SELECTION_RECT]World_Cell) {
+world_grid_get_cells_in_rect :: proc(
+	grid: ^World_Grid,
+	rect: ^Rect,
+) -> (
+	rect_selection: [MAX_CELL_IN_SELECTION_RECT]World_Cell,
+) {
 	x, y, width, height := get_abs_rect_size(rect)
 
 	selected_cell: ^World_Cell
@@ -114,12 +90,19 @@ world_grid_get_cells_in_rect :: proc(grid: ^World_Grid, rect: ^Rect) -> (rect_se
 	return rect_selection
 }
 
-world_grid_get_cell_by_world_pos :: proc(grid: ^World_Grid, x: i32, y: i32) -> (^World_Cell, Grid_Error) {
+world_grid_get_cell_by_world_pos :: proc(
+	grid: ^World_Grid,
+	x: i32,
+	y: i32,
+) -> (
+	^World_Cell,
+	Grid_Error,
+) {
 	return world_grid_get_cell(grid, x / grid.cell_size, y / grid.cell_size)
 }
 
-world_grid_delete :: proc(grid: ^World_Grid) {
-	free(grid)
+world_grid_delete :: proc(world_grid: ^World_Grid) {
+	utils.grid_terminate(&world_grid.grid)
 }
 
 world_grid_render_grid :: proc(grid: ^World_Grid) {
@@ -132,14 +115,12 @@ world_grid_render_grid :: proc(grid: ^World_Grid) {
 	line_width := grid_width + (cell_size * grid_width)
 	line_height := grid_height + (cell_size * grid_height)
 
-	for i in 0..<grid_width {
-		rl.DrawLine(0, i * cell_size,
-			line_width, i * cell_size, GRID_COLOR)
+	for i in 0 ..< grid_width {
+		rl.DrawLine(0, i * cell_size, line_width, i * cell_size, GRID_COLOR)
 	}
 
-	for i in 0..<grid_height {
-		rl.DrawLine(i * cell_size, 0,
-			i * cell_size, line_height, GRID_COLOR)
+	for i in 0 ..< grid_height {
+		rl.DrawLine(i * cell_size, 0, i * cell_size, line_height, GRID_COLOR)
 	}
 
 	// index: i32
@@ -154,10 +135,12 @@ world_grid_render_grid :: proc(grid: ^World_Grid) {
 	// }
 }
 
-world_grid_update_entities_position :: proc(grid: ^World_Grid,
+world_grid_update_entities_position :: proc(
+	grid: ^World_Grid,
 	positions_table: ^ecs.Table(Position),
 	grid_positions_table: ^ecs.Table(Grid_Position),
-	view: ^ecs.View) {
+	view: ^ecs.View,
+) {
 
 	eids := ecs.entities_slice(view)
 	positions := ecs.slice(positions_table)
@@ -165,8 +148,8 @@ world_grid_update_entities_position :: proc(grid: ^World_Grid,
 
 	pos: Position
 	cell: ^World_Cell
-	error: Grid_Error
-	for i in 0..<len(eids) {
+	error: utils.Grid_Error
+	for i in 0 ..< len(eids) {
 		pos = positions[i]
 		cell, error = world_grid_get_cell_by_world_pos(grid, pos.x, pos.y)
 		if error != .None {
@@ -179,10 +162,11 @@ world_grid_update_entities_position :: proc(grid: ^World_Grid,
 	}
 }
 
+//TODO: Move to test pkg
 @(test)
 create_empty_grid_test :: proc(t: ^testing.T) {
-    grid, err := world_grid_create()
-    defer world_grid_delete(grid)
+	grid, err := world_grid_create()
+	defer world_grid_delete(grid)
 
-    testing.expect(t, grid != nil, "Something went wrong on grid memory allocation")
+	testing.expect(t, grid != nil, "Something went wrong on grid memory allocation")
 }
