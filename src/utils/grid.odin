@@ -1,5 +1,6 @@
 package utils
 
+
 Grid :: struct($T: typeid) {
 	cells:         []T,
 	width, height: i32,
@@ -13,13 +14,19 @@ Grid_Error :: enum {
 	None,
 	Out_Of_Range,
 	Grid_Not_Initialized,
+	Grid_Cell_Is_Zero_Sized,
 }
 
-grid_init :: proc(grid: ^Grid($T), width: i32, height: i32) -> bool {
-	if size_of(T) == 0 {return false}
+grid_init :: proc(grid: ^Grid($T), width: i32, height: i32) -> Grid_Error {
+	if size_of(T) == 0 {
+		return .Grid_Cell_Is_Zero_Sized
+	}
 
+	grid.width = width
+	grid.height = height
+	grid.cells = make([]T, width * height)
 
-	return Grid($T){width = width, height = height, cells = make([]T, width * height)}
+	return nil
 }
 
 grid_terminate :: proc(grid: ^Grid($T)) {
