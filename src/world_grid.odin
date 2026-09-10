@@ -18,7 +18,7 @@ WORLD_CELL_SIZE :: 32
 GRID_COLOR :: rl.Color{76, 63, 47, 125}
 
 World_Grid :: struct {
-	grid:      utils.Grid,
+	grid:      utils.Grid(utils.Cell),
 	cell_size: i32,
 	origin:    Position,
 }
@@ -45,9 +45,10 @@ world_grid_create :: proc(
 
 	world_grid := World_Grid {
 		cell_size = cell_size,
-		grid      = utils.grid_init(width, height),
 		origin    = Position{0, 0, 0},
 	}
+
+	utils.grid_init(&world_grid.grid, width, height)
 
 	index: i32
 	for x: i32 = 0; x < width; x += 1 {
