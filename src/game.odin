@@ -8,6 +8,7 @@ import ecs "../vendor/ode_ecs/src"
 import ca "cellular_automaton"
 import "core:fmt"
 import "core:log"
+import "utils"
 import rl "vendor:raylib"
 
 CONSOLE_LOG :: #config(FILE_LOG, true)
@@ -142,14 +143,24 @@ process_frame :: proc(game: ^Game) {
 		x := rl.GetMouseX()
 		y := rl.GetMouseY()
 		// eid := create_base_unit_entity(x, y, &game.ecs_world)
+		//
+		cell_size := game.world_grid.cell_size
+		start_point := utils.Vector2{x - (3 * cell_size), y - (3 * cell_size)}
+		end_point := utils.Vector2{x + (3 * cell_size), y + (3 * cell_size)}
 
-		ca.ca_world_set_cell_alive_world_coord(
-			&game.ca_world,
-			x,
-			y,
-			true,
-			game.world_grid.cell_size,
-		)
+		for i := start_point.x; i < end_point.x; i += cell_size {
+			for j := start_point.y; j < end_point.y; j += cell_size {
+				// ca.ca_world_set_cell_alive_world_coord(
+				// 	&game.ca_world,
+				// 	i,
+				// 	j,
+				// 	true,
+				// 	game.world_grid.cell_size,
+				// )
+
+				create_base_unit_entity(i, j, &game.ecs_world)
+			}
+		}
 
 	}
 
