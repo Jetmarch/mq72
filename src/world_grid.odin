@@ -15,12 +15,10 @@ MAX_CELL_IN_SELECTION_RECT :: MAX_MAP_WIDTH * MAX_MAP_HEIGHT
 WORLD_CELL_SIZE :: 32
 
 
-GRID_COLOR :: rl.Color{76, 63, 47, 125}
-
 World_Grid :: struct {
-	grid:      utils.Grid(utils.Cell),
+	grid:      utils.Grid(World_Cell),
 	cell_size: i32,
-	origin:    Position,
+	origin:    utils.Vector2,
 }
 
 World_Cell :: struct {
@@ -37,31 +35,34 @@ Grid_Cell_Type :: enum {
 }
 
 world_grid_create :: proc(
+	world: ^World_Grid,
 	width: i32 = MAX_MAP_WIDTH,
 	height: i32 = MAX_MAP_HEIGHT,
 	cell_size: i32 = WORLD_CELL_SIZE,
 	allocator := context.allocator,
-) -> World_Grid {
+) -> (
+	ok: bool,
+) {
 
-	world_grid := World_Grid {
-		cell_size = cell_size,
-		origin    = Position{0, 0, 0},
+	world.cell_size = cell_size
+	world.origin = utils.Vector2{0, 0}
+
+	err := utils.grid_init(&world.grid, width, height)
+	if err != nil {
+		return false
 	}
-
-	utils.grid_init(&world_grid.grid, width, height)
 
 	index: i32
 	for x: i32 = 0; x < width; x += 1 {
 		for y: i32 = 0; y < height; y += 1 {
 			index = utils.grid_cell_coord_to_index(x, y, width)
-			world_grid.grid.cells[index].x = x
-			world_grid.grid.cells[index].y = y
-			// world_grid.grid.cells[index].type = .Empty
+			world.grid.cells[index].x = x
+			world.grid.cells[index].y = y
 
 		}
 	}
 
-	return grid
+	return true
 }
 
 ///
@@ -74,12 +75,12 @@ world_grid_get_cells_in_rect :: proc(
 	x, y, width, height := get_abs_rect_size(rect)
 
 	selected_cell: ^World_Cell
-	err: Grid_Error
+	ok: bool
 	next_cell_index: i32 = 0
 	for i := x; i < x + width; i += grid.cell_size {
 		for j := y; j < y + height; j += grid.cell_size {
-			selected_cell, err = world_grid_get_cell_by_world_pos(grid, i, j)
-			if err != .None {
+			selected_cell, ok = world_grid_get_cell_by_world_pos(grid, i, j)
+			if !ok {
 				continue
 			}
 
@@ -96,10 +97,17 @@ world_grid_get_cell_by_world_pos :: proc(
 	x: i32,
 	y: i32,
 ) -> (
-	^World_Cell,
-	Grid_Error,
+	cell: ^World_Cell,
+	ok: bool,
 ) {
-	return world_grid_get_cell(grid, x / grid.cell_size, y / grid.cell_size)
+	err: utils.Grid_Error
+	cell, err = utils.grid_get_cell(&grid.grid, x / grid.cell_size, y / grid.cell_size)
+
+	if err != nil {
+		return nil, false
+	}
+
+	return cell, true
 }
 
 world_grid_delete :: proc(world_grid: ^World_Grid) {
@@ -107,33 +115,7 @@ world_grid_delete :: proc(world_grid: ^World_Grid) {
 }
 
 world_grid_render_grid :: proc(grid: ^World_Grid) {
-	// Render grid
-	cell_size := grid.cell_size
-	grid_origin := grid.origin
-	grid_width := grid.width
-	grid_height := grid.height
-
-	line_width := grid_width + (cell_size * grid_width)
-	line_height := grid_height + (cell_size * grid_height)
-
-	for i in 0 ..< grid_width {
-		rl.DrawLine(0, i * cell_size, line_width, i * cell_size, GRID_COLOR)
-	}
-
-	for i in 0 ..< grid_height {
-		rl.DrawLine(i * cell_size, 0, i * cell_size, line_height, GRID_COLOR)
-	}
-
-	// index: i32
-	// cell: ^World_Cell
-	// for x: i32 = 0; x < grid.width; x+=1 {
-	// 	for y: i32 = 0; y < grid.height; y+=1 {
-	// 		index = world_grid_cell_coord_to_index(x, y, grid.width)
-
-	// 		cell = &grid.cells[index]
-	// 		rl.DrawText(fmt.ctprint(x, y), cell.x + grid.cell_size * grid.width, cell.y + grid.cell_size * grid.height, 14, rl.Color {0, 255, 255, 100})
-	// 	}
-	// }
+	utils.grid_render(&grid.grid, grid.cell_size)
 }
 
 world_grid_update_entities_position :: proc(
@@ -149,11 +131,11 @@ world_grid_update_entities_position :: proc(
 
 	pos: Position
 	cell: ^World_Cell
-	error: utils.Grid_Error
+	ok: bool
 	for i in 0 ..< len(eids) {
 		pos = positions[i]
-		cell, error = world_grid_get_cell_by_world_pos(grid, pos.x, pos.y)
-		if error != .None {
+		cell, ok = world_grid_get_cell_by_world_pos(grid, pos.x, pos.y)
+		if !ok {
 			report_error(fmt.aprintf("Position % is outside of thw world grid", pos))
 			continue
 		}
@@ -166,8 +148,9 @@ world_grid_update_entities_position :: proc(
 //TODO: Move to test pkg
 @(test)
 create_empty_grid_test :: proc(t: ^testing.T) {
-	grid, err := world_grid_create()
-	defer world_grid_delete(grid)
+	grid: World_Grid
+	ok := world_grid_create(&grid)
+	defer world_grid_delete(&grid)
 
-	testing.expect(t, grid != nil, "Something went wrong on grid memory allocation")
+	testing.expect_value(t, ok, true)
 }
