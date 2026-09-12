@@ -19,16 +19,18 @@ main :: proc() {
 	rl.InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_NAME)
 	defer rl.CloseWindow()
 
-	game: App
-	defer terminate_app(&game)
+	rl.SetTargetFPS(60)
 
-	if !init_app(&game, context.allocator) {
+	app: App
+	defer terminate_app(&app)
+
+	if !init_app(&app, context.allocator) {
 		report_error("Init game failure")
 		return
 	}
 
 	for !rl.WindowShouldClose() {
-		process_frame(&game)
-		render_frame(&game)
+		process_frame(&app)
+		render_frame(&app)
 	}
 }

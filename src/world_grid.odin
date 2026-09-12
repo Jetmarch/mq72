@@ -4,15 +4,14 @@ import ecs "../vendor/ode_ecs/src"
 import "core:fmt"
 import "core:testing"
 import "utils"
-import rl "vendor:raylib"
 
 MAX_ENTITIES_IN_CELL :: 4
-MAX_MAP_WIDTH :: 16
-MAX_MAP_HEIGHT :: 16
+MAX_MAP_WIDTH :: 256
+MAX_MAP_HEIGHT :: 256
 // At this point we don't care about memory usage
 // TODO: Calculate amount of cells that can fits in viewport
-MAX_CELL_IN_SELECTION_RECT :: MAX_MAP_WIDTH * MAX_MAP_HEIGHT
-WORLD_CELL_SIZE :: 32
+MAX_CELL_IN_SELECTION_RECT :: 100
+WORLD_CELL_SIZE :: 4
 
 
 World_Grid :: struct {

@@ -63,7 +63,7 @@ init_app :: proc(game: ^App, allocator := context.allocator) -> bool {
 		return false
 	}
 
-	game.ca_rule = ca.ca_world_get_conway_rule()
+	game.ca_rule = ca.ca_world_get_custom_rule()
 
 	game.state = .Running
 	return is_ok
@@ -138,7 +138,6 @@ terminate_app :: proc(game: ^App) {
 	}
 
 	terminate_ecs(&game.ecs_world)
-
 	world_grid_delete(&game.world_grid)
 	ca.ca_world_terminate(&game.ca_world)
 	game.state = .Terminated

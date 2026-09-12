@@ -102,7 +102,7 @@ step :: proc(cw: ^CA_World, rule: ^CA_Rule) {
 
 	for i in 0 ..< len(cw.grid.cells) {
 		cell = &cw.grid.cells[i]
-		cw.grid_buffer.cells[i].neighbor_count = get_alive_neighbor_count(cw, cell)
+		cw.grid_buffer.cells[i].neighbor_count = count_neighbors(cw, cell)
 		cw.grid_buffer.cells[i].is_alive = apply_rule(cell, rule)
 	}
 	cw.grid.cells = cw.grid_buffer.cells
@@ -170,6 +170,40 @@ ca_world_get_conway_rule :: proc() -> CA_Rule {
 	return ca_rule
 }
 
+ca_world_get_custom_rule :: proc() -> CA_Rule {
+	ca_rule: CA_Rule
+
+	ca_rule_init(&ca_rule)
+
+	ca_rule.born_at[0] = 3
+	ca_rule.survive_at[0] = 3
+	ca_rule.survive_at[1] = 2
+
+	return ca_rule
+}
+
+count_neighbors :: proc(cw: ^CA_World, cell: ^CA_Cell) -> (n: u8) {
+	n = 0
+	for dy :i32 = -1; dy <= 1; dy += 1 {
+		for dx :i32 = -1; dx <= 1; dx += 1 {
+			if dx == 0 && dy == 0 {
+				continue
+			}
+			nx := (cell.x + dx + cw.grid.width) % cw.grid.width
+			ny := (cell.y + dy + cw.grid.height) % cw.grid.height
+
+			neighbor, err := utils.grid_get_cell(&cw.grid, nx, ny)
+			if err != nil {
+				continue
+			}
+
+			if neighbor.is_alive {
+				n += 1
+			}
+		}
+	}
+	return n
+}
 
 @(private)
 get_alive_neighbor_count :: proc(
@@ -202,17 +236,21 @@ apply_rule :: proc(
 ) -> (
 	is_alive: bool,
 ) {
-	if contains(&rule.survive_at, cell.neighbor_count) ||
-	   contains(&rule.born_at, cell.neighbor_count) {
-		if cell.is_alive {
-			cell.age += 1
-		} else {
-			is_alive = true
-		}
+	// if contains(&rule.survive_at, cell.neighbor_count) ||
+	//    contains(&rule.born_at, cell.neighbor_count) {
+	// 	if cell.is_alive {
+	// 		cell.age += 1
+	// 	} else {
+	// 		is_alive = true
+	// 	}
 
-	} else {
-		is_alive = false
+	// } else {
+	// 	is_alive = false
+	// }
+
+	if cell.is_alive {
+		return cell.neighbor_count == 2 || cell.neighbor_count == 3
 	}
 
-	return is_alive
+	return cell.neighbor_count == 3
 }

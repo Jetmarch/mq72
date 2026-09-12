@@ -21,7 +21,6 @@ init_ecs_world :: proc(ecs_world: ^Ecs_World) -> bool {
 	ecs_world.err = ecs.init(&ecs_world.units_db, UNIT_ENTITIES_CAP)
 
 	if ecs_world.err != nil {
-		log.error("Error:", ecs_world.err)
 		return false
 	}
 
@@ -106,5 +105,7 @@ update_ecs_systems :: proc(ecs_world: ^Ecs_World) {
 }
 
 terminate_ecs :: proc(ecs_world: ^Ecs_World) {
+	ecs.view_terminate(&ecs_world.render_view)
+	ecs.view_terminate(&ecs_world.grid_position_view)
 	ecs.terminate(&ecs_world.units_db)
 }
