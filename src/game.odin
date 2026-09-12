@@ -150,18 +150,22 @@ process_frame :: proc(game: ^Game) {
 
 		for i := start_point.x; i < end_point.x; i += cell_size {
 			for j := start_point.y; j < end_point.y; j += cell_size {
-				// ca.ca_world_set_cell_alive_world_coord(
-				// 	&game.ca_world,
-				// 	i,
-				// 	j,
-				// 	true,
-				// 	game.world_grid.cell_size,
-				// )
+				ca.ca_world_set_cell_alive_world_coord(
+					&game.ca_world,
+					i,
+					j,
+					true,
+					game.world_grid.cell_size,
+				)
 
-				create_base_unit_entity(i, j, &game.ecs_world)
+				// create_base_unit_entity(i, j, &game.ecs_world)
 			}
 		}
 
+	}
+
+	if rl.IsKeyPressed(.TAB) {
+		ca.ca_world_update(&game.ca_world, &game.ca_rule)
 	}
 
 	unit_select_handle_input(&game.unit_selection)
@@ -175,7 +179,6 @@ process_frame :: proc(game: ^Game) {
 	)
 
 
-	ca.ca_world_update(&game.ca_world, &game.ca_rule)
 }
 
 render_frame :: proc(game: ^Game) {
@@ -188,7 +191,7 @@ render_frame :: proc(game: ^Game) {
 
 	unit_select_debug_render_selected_grid(&game.world_grid, &game.unit_selection)
 
-	world_grid_render_grid(&game.world_grid)
+	// world_grid_render_grid(&game.world_grid)
 
 	rl.DrawFPS(20, 20)
 

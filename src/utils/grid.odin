@@ -41,6 +41,13 @@ grid_cell_coord_to_index :: proc(x: i32, y: i32, width: i32) -> (index: i32) {
 	return y * width + x
 }
 
+grid_cell_index_to_coord :: proc(i: i32, width: i32) -> (x: i32, y: i32) {
+	y = i / width
+	x = i - (y * width)
+
+	return x, y
+}
+
 grid_get_cell :: proc(grid: ^Grid($T), x: i32, y: i32) -> (^T, Grid_Error) {
 	if grid == nil {
 		return nil, .Grid_Not_Initialized

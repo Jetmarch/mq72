@@ -1,6 +1,7 @@
 package cellular_automaton
 
 import "../utils"
+import "core:fmt"
 import "vendor:raylib"
 
 MAX_NEIGHBORS :: 8
@@ -50,6 +51,17 @@ ca_world_init :: proc(ca_world: ^Cellular_World, width: i32, height: i32) -> Err
 	ca_world.neighbors[6] = utils.Vector2{-1, 1}
 	ca_world.neighbors[7] = utils.Vector2{1, 1}
 
+	x: i32
+	y: i32
+	cell: ^Automaton_Cell
+	for i: i32 = 0; i < cast(i32)len(ca_world.grid.cells); i += 1 {
+		x, y = utils.grid_cell_index_to_coord(i, ca_world.grid.width)
+
+		cell = &ca_world.grid.cells[i]
+		cell.x = x
+		cell.y = y
+	}
+
 	return nil
 }
 
@@ -91,7 +103,7 @@ ca_world_set_alive_neighbor_count :: proc(ca_world: ^Cellular_World, cell: ^Auto
 	err: utils.Grid_Error
 	for i in 0 ..< len(ca_world.neighbors) {
 		coords = ca_world.neighbors[i]
-		neighbor, err = utils.grid_get_cell(&ca_world.grid, coords.x, coords.y)
+		neighbor, err = utils.grid_get_cell(&ca_world.grid, cell.x + coords.x, cell.y + coords.y)
 		if err != nil {
 			continue
 		}
@@ -99,6 +111,8 @@ ca_world_set_alive_neighbor_count :: proc(ca_world: ^Cellular_World, cell: ^Auto
 			cell.neighbor_count += 1
 		}
 	}
+
+	// fmt.println("Cell", cell.x, cell.y, cell.neighbor_count)
 }
 
 ca_world_apply_rule :: proc(cell: ^Automaton_Cell, rule: ^Cellular_Rule) {
@@ -131,22 +145,24 @@ ca_world_terminate :: proc(cw: ^Cellular_World) {
 ca_world_render :: proc(cw: ^Cellular_World, cell_size: i32) {
 	utils.grid_render(&cw.grid, cell_size)
 
+	color: raylib.Color
 	cell: ^Automaton_Cell
 	for i in 0 ..< len(cw.grid.cells) {
 		cell = &cw.grid.cells[i]
 		if (cell.is_alive) {
-			raylib.DrawRectangle(
-				cell.x * cell_size,
-				cell.y * cell_size,
-				cell_size,
-				cell_size,
-				raylib.BROWN,
-			)
+			color = raylib.Color{255, 0, 0, 120}
+		} else {
+			color = raylib.BLANK
 		}
+
+		cnt := fmt.caprint(cell.neighbor_count)
+		defer delete(cnt)
+		raylib.DrawRectangle(cell.x * cell_size, cell.y * cell_size, cell_size, cell_size, color)
+		raylib.DrawText(cnt, cell.x * cell_size, cell.y * cell_size, 10, raylib.BLACK)
 	}
 
 }
-
+// B3/S23 rulestring
 ca_world_get_conway_rule :: proc() -> Cellular_Rule {
 	ca_rule: Cellular_Rule
 	ca_rule.born_at[0] = 3
