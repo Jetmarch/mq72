@@ -32,58 +32,57 @@ CA_Cell :: struct {
 	neighbor_count: u8,
 }
 
-
 CA_Error :: enum {
 	None,
 	Incorrect_Grid_Coordinates,
 	Grid_Is_Not_Initialized,
 }
 
-ca_init :: proc(ca_world: ^CA_World, width: i32, height: i32) -> CA_Error {
-	err := utils.grid_init(&ca_world.grid, width, height)
+ca_init :: proc(cw: ^CA_World, width: i32, height: i32) -> CA_Error {
+	err := utils.grid_init(&cw.grid, width, height)
 	if err != nil {
 		return CA_Error.Grid_Is_Not_Initialized
 	}
 
-	err = utils.grid_init(&ca_world.grid_buffer, width, height)
+	err = utils.grid_init(&cw.grid_buffer, width, height)
 	if err != nil {
 		return CA_Error.Grid_Is_Not_Initialized
 	}
 
-	ca_world.neighbors[0] = utils.Vector2{0, -1}
-	ca_world.neighbors[1] = utils.Vector2{0, 1}
-	ca_world.neighbors[2] = utils.Vector2{-1, 0}
-	ca_world.neighbors[3] = utils.Vector2{1, 0}
-	ca_world.neighbors[4] = utils.Vector2{-1, -1}
-	ca_world.neighbors[5] = utils.Vector2{1, -1}
-	ca_world.neighbors[6] = utils.Vector2{-1, 1}
-	ca_world.neighbors[7] = utils.Vector2{1, 1}
+	cw.neighbors[0] = utils.Vector2{0, -1}
+	cw.neighbors[1] = utils.Vector2{0, 1}
+	cw.neighbors[2] = utils.Vector2{-1, 0}
+	cw.neighbors[3] = utils.Vector2{1, 0}
+	cw.neighbors[4] = utils.Vector2{-1, -1}
+	cw.neighbors[5] = utils.Vector2{1, -1}
+	cw.neighbors[6] = utils.Vector2{-1, 1}
+	cw.neighbors[7] = utils.Vector2{1, 1}
 
 	x: i32
 	y: i32
 	cell: ^CA_Cell
-	for i: i32 = 0; i < cast(i32)len(ca_world.grid.cells); i += 1 {
-		x, y = utils.grid_cell_index_to_coord(i, ca_world.grid.width)
+	for i: i32 = 0; i < cast(i32)len(cw.grid.cells); i += 1 {
+		x, y = utils.grid_cell_index_to_coord(i, cw.grid.width)
 
-		cell = &ca_world.grid.cells[i]
+		cell = &cw.grid.cells[i]
 		cell.x = x
 		cell.y = y
 		cell.neighbor_count = 0
 	}
 
-	copy(ca_world.grid_buffer.cells, ca_world.grid.cells)
+	cw.grid_buffer.cells = cw.grid.cells
 
 	return nil
 }
 
 set_cell_alive_by_world_coord :: proc(
-	world: ^CA_World,
+	cw: ^CA_World,
 	x: i32,
 	y: i32,
 	is_alive: bool,
 	cell_size: i32,
 ) -> CA_Error {
-	return set_cell_alive(world, x / cell_size, y / cell_size, is_alive)
+	return set_cell_alive(cw, x / cell_size, y / cell_size, is_alive)
 }
 
 set_cell_alive :: proc(world: ^CA_World, x: i32, y: i32, is_alive: bool) -> CA_Error {
@@ -97,65 +96,18 @@ set_cell_alive :: proc(world: ^CA_World, x: i32, y: i32, is_alive: bool) -> CA_E
 	return nil
 }
 
-step :: proc(world: ^CA_World, rule: ^CA_Rule) {
+step :: proc(cw: ^CA_World, rule: ^CA_Rule) {
 
 	cell: ^CA_Cell
 
-	for i in 0 ..< len(world.grid.cells) {
-		cell = &world.grid.cells[i]
-
-
-		world.grid_buffer.cells[i].neighbor_count = get_alive_neighbor_count(world, cell)
-		world.grid_buffer.cells[i].is_alive = apply_rule(cell, rule)
+	for i in 0 ..< len(cw.grid.cells) {
+		cell = &cw.grid.cells[i]
+		cw.grid_buffer.cells[i].neighbor_count = get_alive_neighbor_count(cw, cell)
+		cw.grid_buffer.cells[i].is_alive = apply_rule(cell, rule)
 	}
-	copy(world.grid.cells, world.grid_buffer.cells)
+	cw.grid.cells = cw.grid_buffer.cells
 }
 
-@(private)
-get_alive_neighbor_count :: proc(
-	ca_world: ^CA_World,
-	cell: ^CA_Cell,
-) -> (
-	neighbors_count: u8,
-) {
-	coords: utils.Vector2
-	neighbor: ^CA_Cell
-	err: utils.Grid_Error
-	for i in 0 ..< len(ca_world.neighbors) {
-		coords = ca_world.neighbors[i]
-		neighbor, err = utils.grid_get_cell(&ca_world.grid, cell.x + coords.x, cell.y + coords.y)
-		if err != nil {
-			continue
-		}
-		if neighbor.is_alive {
-			neighbors_count += 1
-		}
-	}
-
-	return neighbors_count
-}
-
-@(private)
-apply_rule :: proc(
-	cell: ^CA_Cell,
-	rule: ^CA_Rule,
-) -> (
-	is_alive: bool,
-) {
-	if contains(&rule.survive_at, cell.neighbor_count) ||
-	   contains(&rule.born_at, cell.neighbor_count) {
-		if cell.is_alive {
-			cell.age += 1
-		} else {
-			is_alive = true
-		}
-
-	} else {
-		is_alive = false
-	}
-
-	return is_alive
-}
 
 contains :: proc(arr: ^[8]($T), val: ($Y)) -> bool {
 	for i in 0 ..< len(arr) {
@@ -173,7 +125,6 @@ ca_world_terminate :: proc(cw: ^CA_World) {
 }
 
 ca_world_render :: proc(cw: ^CA_World, cell_size: i32) {
-	// utils.grid_render(&cw.grid, cell_size)
 
 	color: raylib.Color
 	cell: ^CA_Cell
@@ -217,4 +168,51 @@ ca_world_get_conway_rule :: proc() -> CA_Rule {
 	ca_rule.survive_at[1] = 3
 
 	return ca_rule
+}
+
+
+@(private)
+get_alive_neighbor_count :: proc(
+	cw: ^CA_World,
+	cell: ^CA_Cell,
+) -> (
+	neighbors_count: u8,
+) {
+	coords: utils.Vector2
+	neighbor: ^CA_Cell
+	err: utils.Grid_Error
+	for i in 0 ..< len(cw.neighbors) {
+		coords = cw.neighbors[i]
+		neighbor, err = utils.grid_get_cell(&cw.grid, cell.x + coords.x, cell.y + coords.y)
+		if err != nil {
+			continue
+		}
+		if neighbor.is_alive {
+			neighbors_count += 1
+		}
+	}
+
+	return neighbors_count
+}
+
+@(private)
+apply_rule :: proc(
+	cell: ^CA_Cell,
+	rule: ^CA_Rule,
+) -> (
+	is_alive: bool,
+) {
+	if contains(&rule.survive_at, cell.neighbor_count) ||
+	   contains(&rule.born_at, cell.neighbor_count) {
+		if cell.is_alive {
+			cell.age += 1
+		} else {
+			is_alive = true
+		}
+
+	} else {
+		is_alive = false
+	}
+
+	return is_alive
 }

@@ -19,10 +19,10 @@ main :: proc() {
 	rl.InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_NAME)
 	defer rl.CloseWindow()
 
-	game: Game
-	defer terminate_game(&game)
+	game: App
+	defer terminate_app(&game)
 
-	if !init_game(&game, context.allocator) {
+	if !init_app(&game, context.allocator) {
 		report_error("Init game failure")
 		return
 	}
