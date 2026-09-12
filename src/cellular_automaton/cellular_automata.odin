@@ -236,18 +236,6 @@ apply_rule :: proc(
 ) -> (
 	is_alive: bool,
 ) {
-	// if contains(&rule.survive_at, cell.neighbor_count) ||
-	//    contains(&rule.born_at, cell.neighbor_count) {
-	// 	if cell.is_alive {
-	// 		cell.age += 1
-	// 	} else {
-	// 		is_alive = true
-	// 	}
-
-	// } else {
-	// 	is_alive = false
-	// }
-
 	if cell.is_alive {
 		return cell.neighbor_count == 2 || cell.neighbor_count == 3
 	}
