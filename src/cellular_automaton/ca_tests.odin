@@ -5,9 +5,9 @@ import "core:testing"
 
 @(test)
 test_ca_world_init :: proc(t: ^testing.T) {
-	ca_world: Cellular_World
-	err: Error
-	err = ca_world_init(&ca_world, 10, 10)
+	ca_world: CA_World
+	err: CA_Error
+	err = ca_init(&ca_world, 10, 10)
 	defer ca_world_terminate(&ca_world)
 
 	testing.expect(t, err == nil, "Cellular world init error")
@@ -16,20 +16,20 @@ test_ca_world_init :: proc(t: ^testing.T) {
 @(test)
 test_ca_world_initca_world_update :: proc(t: ^testing.T) {
 
-	ca_world: Cellular_World
-	err: Error
-	err = ca_world_init(&ca_world, 10, 10)
+	ca_world: CA_World
+	err: CA_Error
+	err = ca_init(&ca_world, 10, 10)
 	defer ca_world_terminate(&ca_world)
 	ca_rule := ca_world_get_conway_rule()
 
-	ca_world_set_cell_alive(&ca_world, 1, 1, true)
-	ca_world_set_cell_alive(&ca_world, 1, 2, true)
-	ca_world_set_cell_alive(&ca_world, 2, 1, true)
-	ca_world_set_cell_alive(&ca_world, 4, 1, true)
-	ca_world_set_cell_alive(&ca_world, 4, 2, true)
+	set_cell_alive(&ca_world, 1, 1, true)
+	set_cell_alive(&ca_world, 1, 2, true)
+	set_cell_alive(&ca_world, 2, 1, true)
+	set_cell_alive(&ca_world, 4, 1, true)
+	set_cell_alive(&ca_world, 4, 2, true)
 
 
-	ca_world_update(&ca_world, &ca_rule)
+	step(&ca_world, &ca_rule)
 
 	cell, grid_err := utils.grid_get_cell(&ca_world.grid, 1, 1)
 

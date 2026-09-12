@@ -30,8 +30,8 @@ Game :: struct {
 	grid_position_view: ecs.View,
 	world_grid:         World_Grid,
 	unit_selection:     Unit_Selection,
-	ca_world:           ca.Cellular_World,
-	ca_rule:            ca.Cellular_Rule,
+	ca_world:           ca.CA_World,
+	ca_rule:            ca.CA_Rule,
 }
 
 Game_State :: enum {
@@ -87,7 +87,7 @@ init_game :: proc(game: ^Game, allocator := context.allocator) -> bool {
 	game.unit_selection.is_active = false
 
 
-	ca_err := ca.ca_world_init(&game.ca_world, MAX_MAP_WIDTH, MAX_MAP_HEIGHT)
+	ca_err := ca.ca_init(&game.ca_world, MAX_MAP_WIDTH, MAX_MAP_HEIGHT)
 	if ca_err != nil {
 		report_error("Cellular world was not initialized")
 		return false
@@ -150,7 +150,7 @@ process_frame :: proc(game: ^Game) {
 
 		for i := start_point.x; i < end_point.x; i += cell_size {
 			for j := start_point.y; j < end_point.y; j += cell_size {
-				ca.ca_world_set_cell_alive_world_coord(
+				ca.set_cell_alive_by_world_coord(
 					&game.ca_world,
 					i,
 					j,
@@ -164,9 +164,9 @@ process_frame :: proc(game: ^Game) {
 
 	}
 
-	if rl.IsKeyPressed(.TAB) {
-		ca.ca_world_update(&game.ca_world, &game.ca_rule)
-	}
+	// if rl.IsKeyPressed(.TAB) {
+	ca.step(&game.ca_world, &game.ca_rule)
+	// }
 
 	unit_select_handle_input(&game.unit_selection)
 	unit_select_mark_selected_units(&game.unit_selection, &game.ecs_world, &game.world_grid)

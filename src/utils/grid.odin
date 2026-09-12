@@ -18,6 +18,7 @@ Grid_Error :: enum {
 	Out_Of_Range,
 	Grid_Not_Initialized,
 	Grid_Cell_Is_Zero_Sized,
+	Grids_Are_Different_Sized,
 }
 
 grid_init :: proc(grid: ^Grid($T), width: i32, height: i32) -> Grid_Error {
