@@ -23,8 +23,8 @@ main :: proc() {
 	defer terminate_game(&game)
 
 	if !init_game(&game, context.allocator) {
-		report_error("Init game failure");
-		return;
+		report_error("Init game failure")
+		return
 	}
 
 	for !rl.WindowShouldClose() {

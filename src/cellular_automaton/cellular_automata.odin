@@ -5,6 +5,8 @@ import "vendor:raylib"
 
 MAX_NEIGHBORS :: 8
 
+DRAW_NEIGHBORS_COUNT :: false
+
 ///
 // CA - Cellular Automaton
 
@@ -183,12 +185,16 @@ ca_world_render :: proc(cw: ^CA_World, cell_size: i32) {
 			color = raylib.BLANK
 		}
 
-		// neighbor_count := ca_world_get_alive_neighbor_count(cw, cell)
-
-		// cnt := fmt.caprint(neighbor_count)
-		// defer delete(cnt)
 		raylib.DrawRectangle(cell.x * cell_size, cell.y * cell_size, cell_size, cell_size, color)
-		// raylib.DrawText(cnt, cell.x * cell_size, cell.y * cell_size, 10, raylib.BLACK)
+
+
+		when DRAW_NEIGHBORS_COUNT {
+			neighbor_count := ca_world_get_alive_neighbor_count(cw, cell)
+
+			cnt := fmt.caprint(neighbor_count)
+			defer delete(cnt)
+			raylib.DrawText(cnt, cell.x * cell_size, cell.y * cell_size, 10, raylib.BLACK)
+		}
 	}
 
 }

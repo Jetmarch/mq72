@@ -157,16 +157,13 @@ process_frame :: proc(game: ^Game) {
 					true,
 					game.world_grid.cell_size,
 				)
-
-				// create_base_unit_entity(i, j, &game.ecs_world)
 			}
 		}
-
 	}
 
-	// if rl.IsKeyPressed(.TAB) {
-	ca.step(&game.ca_world, &game.ca_rule)
-	// }
+	if rl.IsKeyPressed(.TAB) {
+		ca.step(&game.ca_world, &game.ca_rule)
+	}
 
 	unit_select_handle_input(&game.unit_selection)
 	unit_select_mark_selected_units(&game.unit_selection, &game.ecs_world, &game.world_grid)
